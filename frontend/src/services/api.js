@@ -1,9 +1,8 @@
 import axios from 'axios';
 
-// ─── Auto-detect API URL ───────────────────────────────────────────
-// In production: uses VITE_API_URL environment variable
-// In development: uses Vite proxy (/api → localhost:5000)
 const BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
+console.log('API Base URL:', BASE_URL); // Debug log
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -13,7 +12,6 @@ const api = axios.create({
   }
 });
 
-// ─── Request Interceptor ───────────────────────────────────────────
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('notevault_token');
@@ -25,7 +23,6 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ─── Response Interceptor ──────────────────────────────────────────
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -41,7 +38,6 @@ api.interceptors.response.use(
   }
 );
 
-// ─── Notes API ─────────────────────────────────────────────────────
 export const notesAPI = {
   getAll: (params) => api.get('/notes', { params }),
   getById: (id) => api.get(`/notes/${id}`),
@@ -56,7 +52,6 @@ export const notesAPI = {
   getSubjects: () => api.get('/notes/subjects'),
 };
 
-// ─── Auth API ──────────────────────────────────────────────────────
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
