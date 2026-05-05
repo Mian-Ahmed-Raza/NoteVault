@@ -3,9 +3,11 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   BookOpen, Upload, Home, Search, FileText,
   LogOut, Menu, X, ChevronDown,
-  Bell, Settings
+  Bell, Settings, Shield
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+
+
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -142,6 +144,22 @@ const Navbar = () => {
                     <FileText className="w-4 h-4" />
                     My Uploads
                   </Link>
+                  {user?.isAdmin && (
+                    <Link
+                      to="/admin"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150"
+                      style={{
+                        color: 'rgb(248, 113, 113)',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <Shield className="w-4 h-4" />
+                      Admin Panel
+                    </Link>
+                  )}
+
                   <button
                     onClick={handleLogout}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm 

@@ -5,42 +5,36 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
-const adminRoutes = require('./routes/admin');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
 const notesRoutes = require('./routes/notes');
+const adminRoutes = require('./routes/admin');  // ← ADD THIS
 
 const app = express();
 
-// ─── CORS MUST BE FIRST ────────────────────────────────────────────
+// ─── CORS FIRST ────────────────────────────────────────────────────
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-
-  // Allow all origins (fix for Render + Vercel)
   res.setHeader('Access-Control-Allow-Origin', origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Max-Age', '86400');
-
-  // Handle preflight OPTIONS request immediately
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
-
   next();
 });
 
-// ─── Also use cors package as backup ──────────────────────────────
 app.use(cors({
   origin: '*',
   credentials: false,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// ─── Security Middleware ───────────────────────────────────────────
+// ─── Security ──────────────────────────────────────────────────────
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginOpenerPolicy: false
@@ -82,6 +76,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
 // ─── Routes ────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/notes', notesRoutes);
+app.use('/api/admin', adminRoutes);   // ← ADD THIS
 
 // ─── Health Check ──────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
@@ -93,25 +88,30 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ─── Root Route ────────────────────────────────────────────────────
+// ─── Root ──────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.json({
     message: 'NoteVault API',
     version: '1.0.0',
-    endpoints: {
-      health: '/api/health',
-      auth: '/api/auth',
-      notes: '/api/notes'
-    }
+    routes: [
+      '/api/health',
+      '/api/auth',
+      '/api/notes',
+      '/api/admin'
+    ]
   });
 });
 
 // ─── 404 Handler ──────────────────────────────────────────────────
 app.use('*', (req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+  res.status(404).json({
+    error: 'Route not found',
+    path: req.originalUrl,
+    availableRoutes: ['/api/health', '/api/auth', '/api/notes', '/api/admin']
+  });
 });
 
-// ─── Global Error Handler ─────────────────────────────────────────
+// ─── Error Handler ─────────────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error('Global Error:', err);
 
@@ -119,7 +119,7 @@ app.use((err, req, res, next) => {
     return res.status(403).json({ error: 'CORS not allowed' });
   }
   if (err.type === 'entity.too.large') {
-    return res.status(413).json({ error: 'File size too large. Maximum 10MB allowed.' });
+    return res.status(413).json({ error: 'File size too large.' });
   }
   if (err.name === 'ValidationError') {
     const errors = Object.values(err.errors).map(e => e.message);
@@ -135,8 +135,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.use('/api/admin', adminRoutes);
-
 // ─── Start Server ──────────────────────────────────────────────────
 const startServer = async () => {
   try {
@@ -147,6 +145,11 @@ const startServer = async () => {
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 NoteVault server running on port ${PORT}`);
       console.log(`📁 Environment: ${process.env.NODE_ENV}`);
+      console.log('📌 Routes:');
+      console.log('   /api/health');
+      console.log('   /api/auth');
+      console.log('   /api/notes');
+      console.log('   /api/admin');
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);
