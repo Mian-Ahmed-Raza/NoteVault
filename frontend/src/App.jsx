@@ -4,6 +4,10 @@ import { useAuth } from './context/AuthContext';
 import { useToast } from './hooks/useToast';
 import Navbar from './components/Navbar';
 import Toast from './components/Toast';
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminUsers from './pages/admin/AdminUsers'
+import AdminNotes from './pages/admin/AdminNotes'
+
 
 // ─── Lazy Load Pages ───────────────────────────────────────────────
 const AuthPage = React.lazy(() => import('./pages/AuthPage'));
@@ -25,6 +29,14 @@ const PageLoader = () => (
     </div>
   </div>
 );
+
+const AdminRoute = ({ children }) => {
+  const { user, isAuthenticated, loading } = useAuth()
+  if (loading) return <PageLoader />
+  if (!isAuthenticated) return <Navigate to="/auth" replace />
+  if (!user?.isAdmin) return <Navigate to="/dashboard" replace />
+  return children
+}
 
 // ─── Protected Route ───────────────────────────────────────────────
 const ProtectedRoute = ({ children }) => {
@@ -81,6 +93,9 @@ const App = () => {
                         <Route path="/search" element={<SearchPage />} />
                         <Route path="/" element={<Navigate to="/dashboard" replace />} />
                         <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                        <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                        <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+                        <Route path="/admin/notes" element={<AdminRoute><AdminNotes /></AdminRoute>} />
                       </Routes>
                     </main>
                   </div>

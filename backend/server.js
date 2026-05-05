@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
+const adminRoutes = require('./routes/admin');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -133,6 +134,8 @@ app.use((err, req, res, next) => {
     error: err.message || 'Internal server error'
   });
 });
+
+app.use('/api/admin', adminRoutes);
 
 // ─── Start Server ──────────────────────────────────────────────────
 const startServer = async () => {

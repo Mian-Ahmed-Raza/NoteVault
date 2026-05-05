@@ -30,9 +30,17 @@ const userSchema = new mongoose.Schema({
     minlength: [6, 'Password must be at least 6 characters'],
     select: false
   },
-  avatar: {
+  isAdmin: {
+    type: Boolean,
+    default: false
+  },
+  isBanned: {
+    type: Boolean,
+    default: false
+  },
+  banReason: {
     type: String,
-    default: null
+    default: ''
   },
   totalUploads: {
     type: Number,
@@ -48,7 +56,6 @@ const userSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// ─── Virtual: Total Downloads Received ────────────────────────────
 userSchema.virtual('initials').get(function () {
   return this.name
     .split(' ')
@@ -58,7 +65,6 @@ userSchema.virtual('initials').get(function () {
     .slice(0, 2);
 });
 
-// ─── Pre-save: Hash Password ───────────────────────────────────────
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   const salt = await bcrypt.genSalt(12);
@@ -66,18 +72,18 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-// ─── Method: Compare Password ──────────────────────────────────────
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// ─── Method: Get Public Profile ───────────────────────────────────
 userSchema.methods.toPublicJSON = function () {
   return {
     _id: this._id,
     name: this.name,
     rollNumber: this.rollNumber,
     email: this.email,
+    isAdmin: this.isAdmin,
+    isBanned: this.isBanned,
     totalUploads: this.totalUploads,
     joinedAt: this.joinedAt,
     initials: this.initials
