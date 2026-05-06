@@ -42,6 +42,32 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  // ── Email Verification ──────────────────────
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  verificationToken: {
+    type: String,
+    default: null,
+    select: false
+  },
+  verificationTokenExpiry: {
+    type: Date,
+    default: null,
+    select: false
+  },
+  // ── Password Reset ──────────────────────────
+  resetPasswordToken: {
+    type: String,
+    default: null,
+    select: false
+  },
+  resetPasswordExpiry: {
+    type: Date,
+    default: null,
+    select: false
+  },
   totalUploads: {
     type: Number,
     default: 0
@@ -84,6 +110,7 @@ userSchema.methods.toPublicJSON = function () {
     email: this.email,
     isAdmin: this.isAdmin,
     isBanned: this.isBanned,
+    isVerified: this.isVerified,
     totalUploads: this.totalUploads,
     joinedAt: this.joinedAt,
     initials: this.initials

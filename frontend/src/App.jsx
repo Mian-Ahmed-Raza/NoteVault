@@ -4,6 +4,8 @@ import { useAuth } from './context/AuthContext'
 import { useToast } from './hooks/useToast'
 import Navbar from './components/Navbar'
 import Toast from './components/Toast'
+import VerificationBanner from './components/VerificationBanner'
+
 
 // Pages
 import AuthPage from './pages/AuthPage'
@@ -12,6 +14,10 @@ import AllNotes from './pages/AllNotes'
 import UploadPage from './pages/UploadPage'
 import MyUploads from './pages/MyUploads'
 import SearchPage from './pages/SearchPage'
+import VerifyEmailPage from './pages/VerifyEmailPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
+
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -53,6 +59,7 @@ const AppLayout = ({ children }) => (
     <main style={{ paddingTop: 64 }}>
       {children}
     </main>
+    <VerificationBanner />
   </div>
 )
 
@@ -109,6 +116,9 @@ const App = () => {
               <AuthPage />
             </PublicRoute>
           } />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* ── Admin Routes ──────────────────────────────────── */}
           <Route path="/admin" element={

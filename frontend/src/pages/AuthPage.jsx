@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, BookOpen, User, Mail, Lock, Hash, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ToastContext } from '../App';
@@ -244,6 +244,23 @@ const AuthPage = () => {
                   </button>
                 }
               />
+
+              {/* Forgot Password Link - only show on login */}
+              {isLogin && (
+                <div style={{ textAlign: 'right', marginTop: -8 }}>
+                  <Link
+                    to="/forgot-password"
+                    style={{
+                      color: '#818cf8',
+                      fontSize: 13,
+                      textDecoration: 'none',
+                      fontWeight: 500
+                    }}
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+              )}
 
               {/* Submit */}
               <button
