@@ -7,9 +7,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(() => localStorage.getItem('notevault_token'));
   const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
 
-  // ─── Initialize: Check if token is valid ──────────────────────────
+  // ─── Initialize ────────────────────────────────────────────────
   useEffect(() => {
     const initAuth = async () => {
       const storedToken = localStorage.getItem('notevault_token');
@@ -27,13 +26,11 @@ export const AuthProvider = ({ children }) => {
         }
       }
       setLoading(false);
-      setInitialized(true);
     };
-
     initAuth();
   }, []);
 
-  // ─── Login ─────────────────────────────────────────────────────────
+  // ─── Login ─────────────────────────────────────────────────────
   const login = useCallback(async (email, password) => {
     const response = await api.post('/auth/login', { email, password });
     const { token: newToken, user: userData, message } = response.data;
@@ -46,7 +43,7 @@ export const AuthProvider = ({ children }) => {
     return { user: userData, message };
   }, []);
 
-  // ─── Register ──────────────────────────────────────────────────────
+  // ─── Register ──────────────────────────────────────────────────
   const register = useCallback(async (name, rollNumber, email, password) => {
     const response = await api.post('/auth/register', {
       name, rollNumber, email, password
@@ -61,7 +58,7 @@ export const AuthProvider = ({ children }) => {
     return { user: userData, message };
   }, []);
 
-  // ─── Logout ────────────────────────────────────────────────────────
+  // ─── Logout ────────────────────────────────────────────────────
   const logout = useCallback(() => {
     localStorage.removeItem('notevault_token');
     delete api.defaults.headers.common['Authorization'];
@@ -69,7 +66,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   }, []);
 
-  // ─── Update User ───────────────────────────────────────────────────
+  // ─── Update User ───────────────────────────────────────────────
   const updateUser = useCallback((userData) => {
     setUser(prev => ({ ...prev, ...userData }));
   }, []);
@@ -78,8 +75,8 @@ export const AuthProvider = ({ children }) => {
     user,
     token,
     loading,
-    initialized,
     isAuthenticated: !!user,
+    isVerified: user?.isVerified || false,
     login,
     register,
     logout,
@@ -95,9 +92,7 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 };
 

@@ -1,11 +1,10 @@
-import React, { createContext, useEffect } from 'react'
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import React, { createContext } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import { useToast } from './hooks/useToast'
 import Navbar from './components/Navbar'
 import Toast from './components/Toast'
 import VerificationBanner from './components/VerificationBanner'
-
 
 // Pages
 import AuthPage from './pages/AuthPage'
@@ -14,10 +13,10 @@ import AllNotes from './pages/AllNotes'
 import UploadPage from './pages/UploadPage'
 import MyUploads from './pages/MyUploads'
 import SearchPage from './pages/SearchPage'
+import VerifyRequired from './pages/VerifyRequired'
 import VerifyEmailPage from './pages/VerifyEmailPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
-
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -37,8 +36,7 @@ const PageLoader = () => (
   }}>
     <div style={{ textAlign: 'center' }}>
       <div style={{
-        width: 48,
-        height: 48,
+        width: 48, height: 48,
         border: '4px solid rgba(99,102,241,0.2)',
         borderTopColor: '#6366f1',
         borderRadius: '50%',
@@ -52,24 +50,15 @@ const PageLoader = () => (
   </div>
 )
 
-// ─── Layout with Navbar ────────────────────────────────────────────
+// ─── Layout With Navbar ────────────────────────────────────────────
 const AppLayout = ({ children }) => (
   <div style={{ minHeight: '100vh', backgroundColor: '#0a0a0f' }}>
     <Navbar />
     <main style={{ paddingTop: 64 }}>
       {children}
     </main>
-    <VerificationBanner />
   </div>
 )
-
-// ─── Protected Route ───────────────────────────────────────────────
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth()
-  if (loading) return <PageLoader />
-  if (!isAuthenticated) return <Navigate to="/auth" replace />
-  return children
-}
 
 // ─── Public Route ──────────────────────────────────────────────────
 const PublicRoute = ({ children }) => {
@@ -79,25 +68,30 @@ const PublicRoute = ({ children }) => {
   return children
 }
 
+// ─── Protected Route (Must be logged in) ──────────────────────────
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth()
+  if (loading) return <PageLoader />
+  if (!isAuthenticated) return <Navigate to="/auth" replace />
+  return children
+}
+
+// ─── Verified Route (Must be logged in + email verified) ──────────
+const VerifiedRoute = ({ children }) => {
+  const { isAuthenticated, loading, user } = useAuth()
+  if (loading) return <PageLoader />
+  if (!isAuthenticated) return <Navigate to="/auth" replace />
+  if (!user?.isVerified) return <VerifyRequired />
+  return children
+}
+
 // ─── Admin Route ───────────────────────────────────────────────────
 const AdminRoute = ({ children }) => {
   const { user, isAuthenticated, loading } = useAuth()
-
-  // Show loader while auth is initializing
   if (loading) return <PageLoader />
-
-  // Not logged in → go to auth
   if (!isAuthenticated) return <Navigate to="/auth" replace />
-
-  // Logged in but not admin → go to dashboard
-  if (isAuthenticated && user && !user.isAdmin) {
-    return <Navigate to="/dashboard" replace />
-  }
-
-  // Still loading user data
   if (isAuthenticated && !user) return <PageLoader />
-
-  // ✅ Is admin → show admin page
+  if (isAuthenticated && user && !user.isAdmin) return <Navigate to="/dashboard" replace />
   return children
 }
 
@@ -110,11 +104,9 @@ const App = () => {
       <div style={{ minHeight: '100vh', backgroundColor: '#0a0a0f' }}>
         <Routes>
 
-          {/* ── Auth ──────────────────────────────────────────── */}
+          {/* ── Public Routes ─────────────────────────────────── */}
           <Route path="/auth" element={
-            <PublicRoute>
-              <AuthPage />
-            </PublicRoute>
+            <PublicRoute><AuthPage /></PublicRoute>
           } />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -122,60 +114,40 @@ const App = () => {
 
           {/* ── Admin Routes ──────────────────────────────────── */}
           <Route path="/admin" element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
+            <AdminRoute><AdminDashboard /></AdminRoute>
           } />
           <Route path="/admin/users" element={
-            <AdminRoute>
-              <AdminUsers />
-            </AdminRoute>
+            <AdminRoute><AdminUsers /></AdminRoute>
           } />
           <Route path="/admin/notes" element={
-            <AdminRoute>
-              <AdminNotes />
-            </AdminRoute>
+            <AdminRoute><AdminNotes /></AdminRoute>
           } />
 
-          {/* ── App Routes ────────────────────────────────────── */}
+          {/* ── Verified Routes (Need email verification) ─────── */}
           <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Dashboard />
-              </AppLayout>
-            </ProtectedRoute>
+            <VerifiedRoute>
+              <AppLayout><Dashboard /></AppLayout>
+            </VerifiedRoute>
           } />
-
           <Route path="/notes" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <AllNotes />
-              </AppLayout>
-            </ProtectedRoute>
+            <VerifiedRoute>
+              <AppLayout><AllNotes /></AppLayout>
+            </VerifiedRoute>
           } />
-
           <Route path="/upload" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <UploadPage />
-              </AppLayout>
-            </ProtectedRoute>
+            <VerifiedRoute>
+              <AppLayout><UploadPage /></AppLayout>
+            </VerifiedRoute>
           } />
-
           <Route path="/my-uploads" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <MyUploads />
-              </AppLayout>
-            </ProtectedRoute>
+            <VerifiedRoute>
+              <AppLayout><MyUploads /></AppLayout>
+            </VerifiedRoute>
           } />
-
           <Route path="/search" element={
-            <ProtectedRoute>
-              <AppLayout>
-                <SearchPage />
-              </AppLayout>
-            </ProtectedRoute>
+            <VerifiedRoute>
+              <AppLayout><SearchPage /></AppLayout>
+            </VerifiedRoute>
           } />
 
           {/* ── Redirects ─────────────────────────────────────── */}

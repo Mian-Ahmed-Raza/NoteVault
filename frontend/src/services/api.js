@@ -2,16 +2,13 @@ import axios from 'axios';
 
 const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
-console.log('API Base URL:', BASE_URL); // Debug log
-
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  }
+  headers: { 'Content-Type': 'application/json' }
 });
 
+// ─── Request Interceptor ───────────────────────────────────────────
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('notevault_token');
@@ -23,21 +20,31 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// ─── Response Interceptor ──────────────────────────────────────────
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const code = error.response?.data?.code;
+
+    // Token issues → logout
     if (error.response?.status === 401) {
-      const code = error.response?.data?.code;
       if (code === 'TOKEN_EXPIRED' || code === 'INVALID_TOKEN') {
         localStorage.removeItem('notevault_token');
         delete api.defaults.headers.common['Authorization'];
         window.location.href = '/auth';
       }
     }
+
+    // Not verified → redirect to dashboard (VerifiedRoute will show VerifyRequired)
+    if (error.response?.status === 403 && code === 'EMAIL_NOT_VERIFIED') {
+      window.location.href = '/dashboard';
+    }
+
     return Promise.reject(error);
   }
 );
 
+// ─── Notes API ─────────────────────────────────────────────────────
 export const notesAPI = {
   getAll: (params) => api.get('/notes', { params }),
   getById: (id) => api.get(`/notes/${id}`),
@@ -52,11 +59,15 @@ export const notesAPI = {
   getSubjects: () => api.get('/notes/subjects'),
 };
 
+// ─── Auth API ──────────────────────────────────────────────────────
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
   getMe: () => api.get('/auth/me'),
-  updateProfile: (data) => api.put('/auth/profile', data),
+  verifyEmail: (token) => api.post('/auth/verify-email', { token }),
+  resendVerification: () => api.post('/auth/resend-verification'),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (token, newPassword) => api.post('/auth/reset-password', { token, newPassword }),
 };
 
 export default api;
