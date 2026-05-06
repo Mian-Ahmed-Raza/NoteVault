@@ -30,7 +30,6 @@ const register = async (req, res, next) => {
       return res.status(409).json({ error: 'An account with this email already exists' });
     }
 
-    // Generate verification token
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
     const user = await User.create({
@@ -39,21 +38,26 @@ const register = async (req, res, next) => {
       email: email.toLowerCase().trim(),
       password,
       verificationToken,
-      verificationTokenExpiry: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+      verificationTokenExpiry: Date.now() + 24 * 60 * 60 * 1000,
       isVerified: false,
     });
 
-    // Send verification email (don't fail registration if email fails)
+    // Try to send email but DON'T fail registration
     try {
+      console.log('📧 Sending verification email to:', user.email);
       await sendVerificationEmail(user.email, user.name, verificationToken);
+      console.log('✅ Verification email sent!');
     } catch (emailError) {
-      console.error('Failed to send verification email:', emailError.message);
+      // Just log the error - don't fail registration
+      console.error('❌ Email failed but registration succeeded');
+      console.error('❌ Email error:', emailError.message);
+      console.error('❌ Email error code:', emailError.code);
     }
 
     const token = generateToken(user._id);
 
     res.status(201).json({
-      message: 'Account created! Please check your email to verify your account.',
+      message: 'Account created successfully! Welcome to NoteVault.',
       token,
       user: user.toPublicJSON(),
       requiresVerification: true
@@ -63,6 +67,66 @@ const register = async (req, res, next) => {
   }
 };
 
+// ─── Resend Verification Email ─────────────────────────────────────
+const resendVerification = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .select('+verificationToken +verificationTokenExpiry');
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ error: 'Email is already verified' });
+    }
+
+    console.log('📧 Resending verification to:', user.email);
+    console.log('📧 EMAIL_USER:', process.env.EMAIL_USER);
+    console.log('📧 EMAIL_PASS exists:', !!process.env.EMAIL_PASS);
+    console.log('📧 EMAIL_PASS length:', process.env.EMAIL_PASS?.length);
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    user.verificationToken = verificationToken;
+    user.verificationTokenExpiry = Date.now() + 24 * 60 * 60 * 1000;
+    await user.save();
+
+    try {
+      await sendVerificationEmail(user.email, user.name, verificationToken);
+      res.json({ message: 'Verification email sent! Please check your inbox.' });
+    } catch (emailError) {
+      console.error('❌ Resend failed:', emailError.message);
+      console.error('❌ Full error:', emailError);
+      return res.status(500).json({
+        error: `Email failed: ${emailError.message}`,
+        code: emailError.code,
+        hint: getEmailHint(emailError)
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── Helper: Get Email Hint ────────────────────────────────────────
+const getEmailHint = (error) => {
+  if (error.code === 'EAUTH') {
+    return 'Gmail authentication failed. Check EMAIL_USER and EMAIL_PASS in environment variables.';
+  }
+  if (error.code === 'ECONNREFUSED') {
+    return 'Cannot connect to Gmail SMTP. Check network settings.';
+  }
+  if (error.code === 'ETIMEDOUT') {
+    return 'Connection timed out. Gmail SMTP may be blocked.';
+  }
+  if (error.message?.includes('Invalid login')) {
+    return 'Invalid Gmail credentials. Make sure you are using an App Password, not your regular password.';
+  }
+  if (error.message?.includes('Username and Password not accepted')) {
+    return 'Gmail rejected the credentials. Generate a new App Password at myaccount.google.com/apppasswords';
+  }
+  return 'Unknown email error. Check server logs for details.';
+};
 // ─── Login ─────────────────────────────────────────────────────────
 const login = async (req, res, next) => {
   try {
@@ -136,36 +200,6 @@ const verifyEmail = async (req, res, next) => {
   }
 };
 
-// ─── Resend Verification Email ─────────────────────────────────────
-const resendVerification = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user._id)
-      .select('+verificationToken +verificationTokenExpiry');
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    if (user.isVerified) {
-      return res.status(400).json({ error: 'Email is already verified' });
-    }
-
-    // Generate new token
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    user.verificationToken = verificationToken;
-    user.verificationTokenExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
-    await user.save();
-
-    // Send email
-    await sendVerificationEmail(user.email, user.name, verificationToken);
-
-    res.json({ 
-      message: 'Verification email sent! Please check your inbox.' 
-    });
-  } catch (error) {
-    next(error);
-  }
-};
 
 // ─── Forgot Password ───────────────────────────────────────────────
 const forgotPassword = async (req, res, next) => {
