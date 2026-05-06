@@ -150,24 +150,18 @@ const resendVerification = async (req, res, next) => {
       return res.status(400).json({ error: 'Email is already verified' });
     }
 
-    // Rate limit: Check if last email was sent less than 2 minutes ago
-    if (user.verificationTokenExpiry) {
-      const timeSinceLastEmail = (user.verificationTokenExpiry - Date.now()) - (23 * 60 * 60 * 1000);
-      if (timeSinceLastEmail > 0) {
-        return res.status(429).json({
-          error: 'Please wait 2 minutes before requesting another verification email'
-        });
-      }
-    }
-
+    // Generate new token
     const verificationToken = crypto.randomBytes(32).toString('hex');
     user.verificationToken = verificationToken;
-    user.verificationTokenExpiry = Date.now() + 24 * 60 * 60 * 1000;
+    user.verificationTokenExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
     await user.save();
 
+    // Send email
     await sendVerificationEmail(user.email, user.name, verificationToken);
 
-    res.json({ message: 'Verification email sent! Please check your inbox.' });
+    res.json({ 
+      message: 'Verification email sent! Please check your inbox.' 
+    });
   } catch (error) {
     next(error);
   }
